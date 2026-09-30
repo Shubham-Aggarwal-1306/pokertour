@@ -1,6 +1,7 @@
 import { tool } from "langchain";
 import { z } from "zod";
 import { searchTournaments } from "@/lib/search";
+import { recordEngagement } from "@/lib/engagement";
 import { getStore } from "@/lib/store";
 import { SearchQuerySchema, type Tournament } from "@/lib/types";
 import { chatConfig } from "./config";
@@ -25,7 +26,7 @@ export const searchTool = tool(
   {
     name: "search_tournaments",
     description:
-      "Hybrid semantic + keyword search over upcoming poker tournaments. Put the player's intent in q (e.g. 'deep structure bounty for recreational players'); use filters for hard constraints.",
+      "Hybrid semantic + keyword search over upcoming poker tournaments. Put the player's intent in q (e.g. 'deep structure bounty for recreational players'); use filters for hard constraints; sort=popular for trending/most popular.",
     schema: SearchInput,
     responseFormat: "content_and_artifact",
   },
@@ -34,6 +35,7 @@ export const searchTool = tool(
 export const getTournamentTool = tool(
   async ({ id }): Promise<[string, Tournament[]]> => {
     const t = await getStore().get(id);
+    if (t) recordEngagement(t.id, "chat");
     return t ? [tournamentDetail(t), [t]] : [`No tournament with id ${id}`, []];
   },
   {

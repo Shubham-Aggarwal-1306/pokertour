@@ -1,6 +1,7 @@
 import { ChatRequestSchema, runChat, type ChatEvent } from "@/lib/ai/chat";
 import { chatConfig } from "@/lib/ai/config";
 import { tournamentDetail } from "@/lib/ai/format";
+import { recordEngagement } from "@/lib/engagement";
 import { rateLimit } from "@/lib/rate-limit";
 import { getStore } from "@/lib/store";
 
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
   }
 
   const tournament = tournamentId ? await getStore().get(tournamentId) : null;
+  if (tournament) recordEngagement(tournament.id, "chat", ip);
 
   const encoder = new TextEncoder();
   const body = new ReadableStream<Uint8Array>({

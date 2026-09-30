@@ -6,6 +6,8 @@ import { parseSearchParams } from "@/lib/search-params";
 import { searchTournaments } from "@/lib/search";
 
 const PAGE_SIZE = 20;
+const TRENDING_COUNT = 6;
+const TRENDING_WINDOW_DAYS = 60;
 
 export default async function Home({
   searchParams,
@@ -15,7 +17,18 @@ export default async function Home({
   const params = await searchParams;
   const query = parseSearchParams(params);
   const offset = query.offset ?? 0;
-  const { items, total } = await searchTournaments({ ...query, limit: PAGE_SIZE, offset });
+  const isLanding = Object.values(params).every((v) => !v);
+  const [{ items, total }, trending] = await Promise.all([
+    searchTournaments({ ...query, limit: PAGE_SIZE, offset }),
+    // Landing page: upcoming events in the next two months, ranked by popularity.
+    isLanding
+      ? searchTournaments({
+          sort: "popular",
+          to: new Date(Date.now() + TRENDING_WINDOW_DAYS * 86_400_000).toISOString().slice(0, 10),
+          limit: TRENDING_COUNT,
+        })
+      : null,
+  ]);
 
   const pageHref = (newOffset: number) => {
     const sp = new URLSearchParams();
@@ -32,6 +45,22 @@ export default async function Home({
           <p className="text-sm text-muted">Live and online events worldwide, by location, buy-in, game and date.</p>
         </div>
         <Filters query={query} />
+        {trending && trending.items.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-lg font-semibold">Trending now</h2>
+              <Link href="/?sort=popular" className="text-sm text-accent">
+                See all popular →
+              </Link>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {trending.items.map((t) => (
+                <TournamentCard key={t.id} t={t} compact />
+              ))}
+            </div>
+            <h2 className="pt-2 text-lg font-semibold">Upcoming</h2>
+          </div>
+        )}
         <p className="text-sm text-muted">
           {total} tournament{total === 1 ? "" : "s"}
         </p>

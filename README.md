@@ -25,7 +25,8 @@ Built with Next.js (App Router) for Vercel, LangChain + Claude for the assistant
 
 | Piece | Where |
 | --- | --- |
-| Search UI (server-rendered, works without JS) | `src/app/page.tsx`, `src/components/Filters.tsx` |
+| Search UI (server-rendered, works without JS) + "Trending now" | `src/app/page.tsx`, `src/components/Filters.tsx` |
+| Popularity ranking + engagement tracking | `src/lib/popularity.ts`, `src/lib/engagement.ts`, `src/app/api/tournaments/[id]/engage/route.ts` |
 | Tournament page + contextual chat | `src/app/tournaments/[id]/page.tsx` |
 | Chat UI (streams NDJSON) | `src/components/Chat.tsx` |
 | Chat API / LangChain agent | `src/app/api/chat/route.ts`, `src/lib/ai/*` |
@@ -36,6 +37,22 @@ Built with Next.js (App Router) for Vercel, LangChain + Claude for the assistant
 | DB schema | `db/schema.sql` |
 
 With no env vars set, the app runs entirely on bundled **fictional demo data**, which is labelled "Demo data" in the UI. It uses an in-memory vector store and a free local embedder, so you can try it before wiring anything up.
+
+## Popularity ranking
+
+"Most popular" (`sort=popular`) ranks **upcoming** tournaments by:
+
+```
+popularity = Σ last 30 days of (views·1 + official-link clicks·3 + chat questions·2) · 0.5^(age/7 days)
+           + 2 · log10(1 + guaranteeUsd / 1000)
+```
+
+- **Engagement:** page views and clicks to the official page are sent from the tournament page as beacons. Chat questions about a tournament are recorded server-side.
+- **Anti-inflation:** each IP counts at most once per tournament per signal every 6 hours, and obvious bots are ignored.
+- **Decay:** with a 7-day half-life, "trending" reflects current interest.
+- **Baseline:** the guarantee-based prior gives brand-new events a sensible starting rank before they have traffic.
+
+Engagement is stored as daily counters in `tournament_engagement` and scored at query time. The landing page shows the top 6 events of the next 60 days as **Trending now**. The API (`/api/tournaments?sort=popular`) and the AI assistant ("what's popular this month?") use the same ranking. Tune the weights in `src/lib/popularity.ts`.
 
 ## Keeping AI costs low
 

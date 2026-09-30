@@ -19,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <nav className="flex gap-4 text-sm text-muted">
               <Link href="/">Search</Link>
+              <Link href="/?sort=popular">Popular</Link>
               <Link href="/chat">Ask AI</Link>
             </nav>
           </div>

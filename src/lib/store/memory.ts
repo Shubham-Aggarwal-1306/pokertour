@@ -1,4 +1,5 @@
 import { buildSampleTournaments } from "@/lib/data/sample";
+import { engagementScore, popularityPrior, type DailyEngagement, type EngagementKind } from "@/lib/popularity";
 import type { SearchQuery, SearchResult, Tournament } from "@/lib/types";
 import { DEFAULT_LIMIT, todayIso, type SearchOptions, type TournamentStore } from "./types";
 
@@ -32,7 +33,12 @@ function textScore(t: Tournament, terms: string[]): number {
 }
 
 /** Filtering, scoring and sorting shared by the in-memory store and tests. */
-export function searchInMemory(all: Tournament[], query: SearchQuery, options: SearchOptions = {}): SearchResult {
+export function searchInMemory(
+  all: Tournament[],
+  query: SearchQuery,
+  options: SearchOptions = {},
+  engagement: Map<string, DailyEngagement[]> = new Map(),
+): SearchResult {
   const ids = options.ids ? new Set(options.ids) : null;
   const terms = norm(query.q).split(/\s+/).filter(Boolean);
   const from = query.from ?? todayIso();
@@ -56,6 +62,11 @@ export function searchInMemory(all: Tournament[], query: SearchQuery, options: S
   }
 
   const sort = query.sort ?? (terms.length ? "relevance" : "date");
+  if (sort === "popular") {
+    for (const s of scored) {
+      s.t = { ...s.t, popularity: engagementScore(engagement.get(s.t.id) ?? []) + popularityPrior(s.t) };
+    }
+  }
   const byDate = (a: Tournament, b: Tournament) => a.startDate.localeCompare(b.startDate);
   scored.sort((a, b) => {
     switch (sort) {
@@ -63,6 +74,8 @@ export function searchInMemory(all: Tournament[], query: SearchQuery, options: S
         return (a.t.buyInUsd ?? Infinity) - (b.t.buyInUsd ?? Infinity) || byDate(a.t, b.t);
       case "buyin_desc":
         return (b.t.buyInUsd ?? -1) - (a.t.buyInUsd ?? -1) || byDate(a.t, b.t);
+      case "popular":
+        return b.t.popularity! - a.t.popularity! || byDate(a.t, b.t);
       case "guarantee_desc":
         return (b.t.guaranteeUsd ?? -1) - (a.t.guaranteeUsd ?? -1) || byDate(a.t, b.t);
       case "relevance":
@@ -81,13 +94,14 @@ export function searchInMemory(all: Tournament[], query: SearchQuery, options: S
 export class MemoryStore implements TournamentStore {
   private rows = new Map<string, Tournament>();
   private hashes = new Map<string, string>();
+  private engagement = new Map<string, DailyEngagement[]>();
 
   constructor(seed: Tournament[] = buildSampleTournaments()) {
     for (const t of seed) this.rows.set(t.id, t);
   }
 
   async search(query: SearchQuery, options?: SearchOptions) {
-    return searchInMemory([...this.rows.values()], query, options);
+    return searchInMemory([...this.rows.values()], query, options, this.engagement);
   }
 
   async get(id: string) {
@@ -105,5 +119,14 @@ export class MemoryStore implements TournamentStore {
 
   async setSourceHash(url: string, hash: string) {
     this.hashes.set(url, hash);
+  }
+
+  async recordEngagement(id: string, kind: EngagementKind) {
+    const day = todayIso();
+    const days = this.engagement.get(id) ?? [];
+    let entry = days.find((d) => d.day === day);
+    if (!entry) days.push((entry = { day, views: 0, clicks: 0, chats: 0 }));
+    entry[kind === "view" ? "views" : kind === "click" ? "clicks" : "chats"]++;
+    this.engagement.set(id, days);
   }
 }

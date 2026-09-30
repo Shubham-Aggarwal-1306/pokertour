@@ -56,6 +56,7 @@ function sortBy(items: Tournament[], sort: NonNullable<SearchQuery["sort"]>): To
   const byDate = (a: Tournament, b: Tournament) => a.startDate.localeCompare(b.startDate);
   const cmp: Record<string, (a: Tournament, b: Tournament) => number> = {
     date: byDate,
+    popular: (a, b) => (b.popularity ?? 0) - (a.popularity ?? 0) || byDate(a, b),
     buyin_asc: (a, b) => (a.buyInUsd ?? Infinity) - (b.buyInUsd ?? Infinity) || byDate(a, b),
     buyin_desc: (a, b) => (b.buyInUsd ?? -1) - (a.buyInUsd ?? -1) || byDate(a, b),
     guarantee_desc: (a, b) => (b.guaranteeUsd ?? -1) - (a.guaranteeUsd ?? -1) || byDate(a, b),

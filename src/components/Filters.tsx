@@ -48,6 +48,7 @@ export function Filters({ query }: { query: SearchQuery }) {
         <input name="from" type="date" defaultValue={query.from} className="input" aria-label="From date" />
         <select name="sort" defaultValue={query.sort ?? ""} className="input" aria-label="Sort">
           <option value="">Best match</option>
+          <option value="popular">Most popular</option>
           <option value="date">Soonest</option>
           <option value="buyin_asc">Buy-in: low → high</option>
           <option value="buyin_desc">Buy-in: high → low</option>

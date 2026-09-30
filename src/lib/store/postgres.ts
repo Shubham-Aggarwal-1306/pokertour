@@ -1,4 +1,5 @@
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
+import { POPULARITY_SQL, type EngagementKind } from "@/lib/popularity";
 import type { SearchQuery, SearchResult, Tournament } from "@/lib/types";
 import { DEFAULT_LIMIT, todayIso, type SearchOptions, type TournamentStore } from "./types";
 
@@ -35,11 +36,13 @@ function fromRow(r: Row): Tournament {
     source: r.source as string,
     sourceUrl: (r.source_url as string) ?? null,
     updatedAt: iso(r.updated_at)!,
+    ...(r.popularity != null ? { popularity: Number(r.popularity) } : {}),
   };
 }
 
 const ORDER: Record<string, string> = {
   date: "start_date ASC",
+  popular: "popularity DESC, start_date ASC",
   buyin_asc: "buy_in_usd ASC NULLS LAST, start_date ASC",
   buyin_desc: "buy_in_usd DESC NULLS LAST, start_date ASC",
   guarantee_desc: "guarantee_usd DESC NULLS LAST, start_date ASC",
@@ -93,8 +96,8 @@ export class PostgresStore implements TournamentStore {
     const limit = p(query.limit ?? DEFAULT_LIMIT);
     const offset = p(query.offset ?? 0);
     const text = `
-      SELECT *, ${rank} AS rank, count(*) OVER() AS total
-      FROM tournaments
+      SELECT t.*, ${rank} AS rank, ${sort === "popular" ? POPULARITY_SQL : "NULL"} AS popularity, count(*) OVER() AS total
+      FROM tournaments t
       WHERE ${where.join(" AND ")}
       ORDER BY ${ORDER[sort] ?? ORDER.date}
       LIMIT ${limit} OFFSET ${offset}`;
@@ -149,6 +152,16 @@ export class PostgresStore implements TournamentStore {
       `INSERT INTO source_pages (url, content_hash, fetched_at) VALUES ($1, $2, now())
        ON CONFLICT (url) DO UPDATE SET content_hash = EXCLUDED.content_hash, fetched_at = now()`,
       [url, hash],
+    );
+  }
+
+  async recordEngagement(id: string, kind: EngagementKind) {
+    const column = { view: "views", click: "clicks", chat: "chats" }[kind];
+    await this.sql.query(
+      `INSERT INTO tournament_engagement (tournament_id, day, ${column})
+       SELECT id, current_date, 1 FROM tournaments WHERE id = $1
+       ON CONFLICT (tournament_id, day) DO UPDATE SET ${column} = tournament_engagement.${column} + 1`,
+      [id],
     );
   }
 }

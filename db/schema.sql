@@ -62,3 +62,14 @@ CREATE TABLE IF NOT EXISTS tournament_embeddings (
 
 CREATE INDEX IF NOT EXISTS tournament_embeddings_hnsw_idx
   ON tournament_embeddings USING hnsw (embedding vector_cosine_ops);
+
+-- Popularity: per-day engagement counters, aggregated with time decay at query
+-- time (see src/lib/popularity.ts).
+CREATE TABLE IF NOT EXISTS tournament_engagement (
+  tournament_id TEXT NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+  day           DATE NOT NULL,
+  views         INTEGER NOT NULL DEFAULT 0,
+  clicks        INTEGER NOT NULL DEFAULT 0,
+  chats         INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (tournament_id, day)
+);

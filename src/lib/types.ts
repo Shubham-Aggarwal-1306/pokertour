@@ -46,11 +46,13 @@ export const TournamentSchema = z.object({
   source: z.string(),
   sourceUrl: z.string().nullable(),
   updatedAt: z.string(),
+  /** Popularity score; only populated when results are sorted by popularity. */
+  popularity: z.number().optional(),
 });
 
 export type Tournament = z.infer<typeof TournamentSchema>;
 
-export const SORTS = ["date", "buyin_asc", "buyin_desc", "guarantee_desc", "relevance"] as const;
+export const SORTS = ["date", "popular", "buyin_asc", "buyin_desc", "guarantee_desc", "relevance"] as const;
 
 /** Shared by the search API, the search page and the AI assistant's search tool. */
 export const SearchQuerySchema = z.object({

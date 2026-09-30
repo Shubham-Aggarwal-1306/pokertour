@@ -1,3 +1,4 @@
+import type { EngagementKind } from "@/lib/popularity";
 import type { SearchQuery, SearchResult, Tournament } from "@/lib/types";
 
 export interface SearchOptions {
@@ -13,6 +14,8 @@ export interface TournamentStore {
   /** Content hash of a source page from the last ingest, used to skip unchanged pages. */
   getSourceHash(sourceUrl: string): Promise<string | null>;
   setSourceHash(sourceUrl: string, hash: string): Promise<void>;
+  /** Count a user interaction (view, outbound click, chat question) toward popularity. */
+  recordEngagement(tournamentId: string, kind: EngagementKind): Promise<void>;
 }
 
 export const DEFAULT_LIMIT = 20;

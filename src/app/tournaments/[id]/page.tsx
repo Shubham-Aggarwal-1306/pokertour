@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Chat } from "@/components/Chat";
+import { OutboundLink, TrackView } from "@/components/Engagement";
 import { formatDateRange, locationLabel } from "@/components/TournamentCard";
 import { formatMoney } from "@/lib/currency";
 import { getStore } from "@/lib/store";
@@ -34,6 +35,7 @@ export default async function TournamentPage({ params }: Props) {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <article className="min-w-0 space-y-4">
+        <TrackView id={t.id} />
         <div>
           <h1 className="text-2xl font-semibold">{t.name}</h1>
           <p className="text-muted">{locationLabel(t)}</p>
@@ -56,9 +58,9 @@ export default async function TournamentPage({ params }: Props) {
         {t.description && <p className="leading-relaxed">{t.description}</p>}
         <div className="flex flex-wrap gap-3 text-sm">
           {t.url && (
-            <a className="btn" href={t.url} target="_blank" rel="noopener noreferrer">
+            <OutboundLink id={t.id} className="btn" href={t.url}>
               Official page ↗
-            </a>
+            </OutboundLink>
           )}
           {t.sourceUrl && t.sourceUrl !== t.url && (
             <a className="text-muted underline" href={t.sourceUrl} target="_blank" rel="noopener noreferrer">
