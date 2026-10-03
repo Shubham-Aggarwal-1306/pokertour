@@ -1,5 +1,6 @@
 import { Document } from "@langchain/core/documents";
 import { formatMoney } from "@/lib/currency";
+import { getDatabaseUrl } from "@/lib/db-url";
 import { getStore } from "@/lib/store";
 import type { Tournament } from "@/lib/types";
 import { getEmbeddings } from "./embeddings";
@@ -39,8 +40,9 @@ let vectorStore: Promise<TournamentVectorStore> | undefined;
 export function getVectorStore(): Promise<TournamentVectorStore> {
   vectorStore ??= (async () => {
     const embeddings = getEmbeddings();
-    if (process.env.DATABASE_URL) {
-      return new NeonVectorStore(embeddings, { connectionString: process.env.DATABASE_URL, model: embeddings.modelName });
+    const url = getDatabaseUrl();
+    if (url) {
+      return new NeonVectorStore(embeddings, { connectionString: url, model: embeddings.modelName });
     }
     // Demo mode: embed the in-memory sample data on first use.
     const store = new InMemoryVectorStore(embeddings);

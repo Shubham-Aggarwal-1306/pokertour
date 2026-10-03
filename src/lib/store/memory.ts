@@ -90,7 +90,7 @@ export function searchInMemory(
   return { items: scored.slice(offset, offset + limit).map((s) => s.t), total: scored.length };
 }
 
-/** Used when DATABASE_URL is not set: serves the bundled sample data. Writes live only for the process lifetime. */
+/** Used when no database is configured: serves the bundled sample data. Writes live only for the process lifetime. */
 export class MemoryStore implements TournamentStore {
   private rows = new Map<string, Tournament>();
   private hashes = new Map<string, string>();

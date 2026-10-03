@@ -18,7 +18,7 @@ const cosine = (a: number[], b: number[]) => {
   return dot / (Math.sqrt(na * nb) || 1);
 };
 
-/** In-process vector store for local dev / demo mode (no DATABASE_URL). */
+/** In-process vector store for local dev / demo mode (no database configured). */
 export class InMemoryVectorStore extends VectorStore {
   declare FilterType: IdFilter;
   private rows = new Map<string, { vector: number[]; doc: DocumentInterface }>();

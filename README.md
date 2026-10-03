@@ -73,41 +73,57 @@ All limits can be tuned with the `CHAT_*` env vars (see `.env.example`).
 
 The system prompt restricts the assistant to poker tournaments. Off-topic requests, including attempts to override the rules, get a one-sentence decline with no answer to the off-topic part. It must use the tools for facts and never invent events.
 
+## Secrets
+
+Vercel is the single source of truth for secrets. Nothing secret needs to live in the repo or on a laptop:
+
+- **On Vercel:** the app and the build read the project's Environment Variables directly.
+- **Locally:** every script that needs secrets runs through `vercel env run`. It fetches the project's variables from Vercel and passes them only to that one process. No `.env` file is written.
+
+```bash
+npm i -g vercel        # or let the scripts use npx
+vercel login
+vercel link            # once per checkout: pick the pokertour project
+```
+
+The database URL is detected under any name the Neon integration uses (`DATABASE_URL`, `POSTGRES_URL`, or a prefixed variant such as `STORAGE_DATABASE_URL`).
+
 ## Local development
 
 ```bash
 npm install
-cp .env.example .env.local   # optional: add ANTHROPIC_API_KEY to enable chat
-npm run dev                  # http://localhost:3000
-npm test                     # unit tests (no API calls; the agent test uses a fake model)
+npm run dev            # demo data, no secrets needed: http://localhost:3000
+npm run dev:vercel     # same, but with the project's Development env vars from Vercel
+npm test               # unit tests (no API calls; the agent test uses a fake model)
 ```
+
+`dev:vercel` uses the **Development** environment. Tick "Development" when adding a variable in Vercel if you want it available locally. Use a separate dev database or Neon branch rather than pointing local dev at production data.
 
 ## Deploy to Vercel
 
-1. Import the repo in Vercel.
-2. **Database:** add **Neon** from the Vercel Marketplace (Storage tab). This sets `DATABASE_URL`. Then create the tables and pgvector index:
-   ```bash
-   vercel env pull .env.local   # scripts read .env.local automatically
-   npm run db:migrate
-   npm run db:seed              # optional: load the demo data
-   ```
+1. Import the repo in Vercel and deploy. With no env vars, it serves the demo data.
+2. **Database:** Storage → Create → **Neon** → connect it to the project. Then redeploy.
+   **Migrations run automatically on every deploy.** `vercel.json` sets the build command to `npm run vercel-build`, which applies `db/schema.sql` with the project's own secrets before `next build`. Every statement is idempotent.
+   To load the demo tournaments into the database, set `SEED_DEMO_DATA=true` for one deploy, or run `npm run db:seed` locally.
 3. **Env vars** (Project → Settings → Environment Variables):
    - `ANTHROPIC_API_KEY`: required for chat.
    - `VOYAGE_API_KEY`: recommended for real semantic search. Get one at dash.voyageai.com; it has a free tier.
    - `CRON_SECRET`: any long random string. Vercel sends it to the cron route.
    - `INGEST_SOURCES`: JSON list of schedule pages, e.g.
      `[{"id":"my-casino","url":"https://example.com/poker/schedule","ai":true}]`
-4. Deploy. `vercel.json` schedules `/api/cron/ingest` daily at 06:00 UTC.
+4. Redeploy after changing env vars. `vercel.json` also schedules `/api/cron/ingest` daily at 06:00 UTC.
 
 Only ingest sites whose terms allow it, and respect robots.txt. Partner feeds or organizer submissions are the most reliable long-term data source.
 
 ### Useful scripts
 
+These run with the **Production** env vars from Vercel (via `vercel env run -e production`). For another environment, run e.g. `npx vercel env run -e preview -- tsx scripts/seed.ts`.
+
 | Command | What it does |
 | --- | --- |
-| `npm run db:migrate` | Apply `db/schema.sql` (tables, full-text + HNSW vector indexes) |
+| `npm run db:migrate` | Apply `db/schema.sql` manually (also runs on every deploy) |
 | `npm run db:seed` | Load and embed the demo tournaments |
-| `npm run ingest [-- --force]` | Run ingestion locally (`--force` ignores page hashes) |
+| `npm run ingest [-- --force]` | Run ingestion now (`--force` ignores page hashes) |
 | `npm run rag:reindex` | Re-embed all tournaments (after changing `VOYAGE_MODEL` or the embedded text format) |
 
 ## Next steps

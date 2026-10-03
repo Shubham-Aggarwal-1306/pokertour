@@ -5,15 +5,17 @@
   "description": "Public search engine for poker tournaments worldwide, with an AI assistant to find and ask about events.",
   "scripts": {
     "dev": "next dev",
+    "dev:vercel": "npx --yes vercel env run -e development -- next dev",
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test \"src/**/*.test.ts\"",
-    "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.ts",
-    "db:seed": "tsx --env-file-if-exists=.env.local scripts/seed.ts",
-    "ingest": "tsx --env-file-if-exists=.env.local scripts/ingest.ts",
-    "rag:reindex": "tsx --env-file-if-exists=.env.local scripts/reindex.ts"
+    "db:migrate": "npx --yes vercel env run -e production -- tsx scripts/migrate.ts",
+    "db:seed": "npx --yes vercel env run -e production -- tsx scripts/seed.ts",
+    "ingest": "npx --yes vercel env run -e production -- tsx scripts/ingest.ts",
+    "rag:reindex": "npx --yes vercel env run -e production -- tsx scripts/reindex.ts",
+    "vercel-build": "tsx scripts/vercel-setup.ts && next build"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
